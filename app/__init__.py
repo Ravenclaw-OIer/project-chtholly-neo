@@ -1,21 +1,29 @@
 import os
-from flask import flask
+from flask import Flask
 
-def create_app(override_config = None):
-  app = Flask(__name__, instance_relative_config = True)
-  app.config.from_mapping(
-    SECRET_KEY = 'secret-key' # NOTE: Don't use this in production!
-    DATABASE = os.path.join(app.instance_path, 'app.sqlite')
-  )
+def create_app(test_config=None):
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_mapping(
+        SECRET_KEY="dev",
+        DATABASE=os.path.join(app.instance_path, "app.sqlite"),
+    )
 
-  if override_config is not None:
-    app.config.from_mapping(override_config)
-  else:
-    app.config.from_pyfile('config.py', silent = True)
-  
-  try:
-    os.makedirs(app.instance_path)
-  except OSError:
-    pass
+    if test_config is None:
+        app.config.from_pyfile("config.py", silent=True)
+    else:
+        app.config.update(test_config)
 
-  return app
+
+    try:
+        os.makedirs(app.instance_path)
+    except OSError:
+        pass
+
+    @app.route("/testpage")
+    def hello():
+        return "Hello, World!"
+
+    from app import db
+    db.init_app(app)
+
+    return app
