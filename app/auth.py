@@ -34,3 +34,53 @@ def register():
     
     flash(error)
   return render_template('auth/register.html')
+
+@bp.route('/login', methods = ('GET', 'POST')):
+def login():
+  if request.method == 'POST':
+    username = request.form['username']
+    password = request.form['password']
+    db = get_db()
+    error = None
+
+    if not username:
+      error = '用户名不能为空'
+    elif not password:
+      error = '密码不能为空'
+    else:
+      user = db.execute('SELECT id FROM user WHERE username = ?', (username, )).fetchone()
+    
+    if user is None:
+      error = '用户尚未注册'
+    elif not check_password_hash(user['password'], password):
+      error = '密码错误'
+
+    if error is None:
+      session.clear()
+      session['user_id'] = user['id']
+      return redirect(url_for('index'))
+    
+    flash(error)
+  return render_template('auth/register.html')
+
+@bp.route('/logout')
+def logout():
+  session.clear()
+  return redirect(url_for('index'))
+
+def login_required(view):
+  @functools.wraps(view)
+  def wrapped_view(**kwargs):
+    if g.user is None:
+      return redirect(url_for('auth.login'))
+    
+    return view(**kwargs)
+
+@bp.before_app_request
+def load_user():
+  uid = session.get('user_id')
+  if uid is None:
+    g.user = None
+  else:
+    g.user = get_db().execute('SELECT * FROM user WHERE id = ?', (username, )).fetchone()
+    
